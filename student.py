@@ -39,8 +39,10 @@ class StudentManager:
                  bg="#f39c12", fg="white", **btn_style).grid(row=0, column=2, padx=2)
         tk.Button(btn_frame, text="Delete", command=self.show_delete_form,
                  bg="#e74c3c", fg="white", **btn_style).grid(row=0, column=3, padx=2)
+        tk.Button(btn_frame, text="Sort ID", command=self.sort_by_id,
+                 bg="#9b59b6", fg="white", **btn_style).grid(row=0, column=4, padx=2)
         tk.Button(btn_frame, text="Refresh", command=self.load_all_students,
-                 bg="#3498db", fg="white", **btn_style).grid(row=0, column=4, padx=2)
+                 bg="#3498db", fg="white", **btn_style).grid(row=0, column=5, padx=2)
         
         # Search entry
         search_frame = tk.Frame(self.parent)
@@ -179,6 +181,31 @@ class StudentManager:
         """Update status bar"""
         color = "#e74c3c" if error else "#27ae60"
         self.status_label.config(text=message, fg=color)
+    
+    def sort_by_id(self):
+        """Sort students by ID (small to big)"""
+        try:
+            items_data = []
+            for item_id in self.all_items_cache:
+                values = self.tree.item(item_id)["values"]
+                if values and values[0] != "No data":
+                    try:
+                        student_id = int(values[0])
+                        items_data.append((student_id, item_id, values))
+                    except ValueError:
+                        pass
+            
+            items_data.sort(key=lambda x: x[0])
+            
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+            
+            for _, item_id, values in items_data:
+                self.tree.insert("", "end", values=values)
+            
+            self.update_status("Sorted by ID (ascending)")
+        except Exception as e:
+            messagebox.showerror("Sort Error", f"Failed to sort: {str(e)}")
     
     def on_search_change(self, *args):
         """Handle search as user types"""
@@ -356,45 +383,68 @@ class StudentManager:
         form_frame = tk.Frame(form_window, padx=20, pady=10)
         form_frame.pack()
         
+        # Define dropdown options
+        major_options = ["Computer Science", "Mathematics", "Physics", "Chemistry", 
+                         "Biology", "Engineering", "Business", "History", "English", "Arts"]
+        status_options = ["Active", "Inactive"]
+        
         # Fields with labels and entries
         fields = [
-            ("First Name:", "fname"),
-            ("Last Name:", "lname"),
-            ("Gender (M/F):", "gender"),
-            ("Date of Birth (YYYY-MM-DD):", "dob"),
-            ("Contact:", "contact"),
-            ("Address:", "address"),
-            ("Major:", "major"),
-            ("Status:", "status")
+            ("First Name:", "fname", "entry"),
+            ("Last Name:", "lname", "entry"),
+            ("Gender (M/F):", "gender", "entry"),
+            ("Date of Birth (YYYY-MM-DD):", "dob", "entry"),
+            ("Contact:", "contact", "entry"),
+            ("Address:", "address", "entry"),
+            ("Major:", "major", "dropdown"),
+            ("Status:", "status", "dropdown")
         ]
         
         entries = {}
-        for i, (label, key) in enumerate(fields):
+        for i, field_info in enumerate(fields):
+            label = field_info[0]
+            key = field_info[1]
+            field_type = field_info[2]
+            
             tk.Label(form_frame, text=label, anchor="w").grid(row=i, column=0, 
                                                              sticky="w", pady=8)
-            entry = tk.Entry(form_frame, width=35)
-            entry.grid(row=i, column=1, pady=8, padx=(10, 0))
             
-            # Pre-fill if updating
-            if current_values and student_id:
-                if key == "fname" and len(current_values) > 1:
-                    entry.insert(0, current_values[1] or "")
-                elif key == "lname" and len(current_values) > 2:
-                    entry.insert(0, current_values[2] or "")
-                elif key == "gender" and len(current_values) > 3:
-                    entry.insert(0, current_values[3] or "")
-                elif key == "dob" and len(current_values) > 4:
-                    entry.insert(0, current_values[4] or "")
-                elif key == "contact" and len(current_values) > 5:
-                    entry.insert(0, current_values[5] or "")
-                elif key == "address" and len(current_values) > 6:
-                    entry.insert(0, current_values[6] or "")
-                elif key == "major" and len(current_values) > 7:
-                    entry.insert(0, current_values[7] or "")
-                elif key == "status" and len(current_values) > 8:
-                    entry.insert(0, current_values[8] or "")
+            if field_type == "dropdown":
+                if key == "major":
+                    combo = ttk.Combobox(form_frame, values=major_options, width=32, state="readonly")
+                else:  # status
+                    combo = ttk.Combobox(form_frame, values=status_options, width=32, state="readonly")
+                
+                combo.grid(row=i, column=1, pady=8, padx=(10, 0))
+                
+                # Pre-fill if updating
+                if current_values and student_id:
+                    if key == "major" and len(current_values) > 7:
+                        combo.set(current_values[7] or "")
+                    elif key == "status" and len(current_values) > 8:
+                        combo.set(current_values[8] or "")
+                
+                entries[key] = combo
+            else:
+                entry = tk.Entry(form_frame, width=35)
+                entry.grid(row=i, column=1, pady=8, padx=(10, 0))
+                
+                # Pre-fill if updating
+                if current_values and student_id:
+                    if key == "fname" and len(current_values) > 1:
+                        entry.insert(0, current_values[1] or "")
+                    elif key == "lname" and len(current_values) > 2:
+                        entry.insert(0, current_values[2] or "")
+                    elif key == "gender" and len(current_values) > 3:
+                        entry.insert(0, current_values[3] or "")
+                    elif key == "dob" and len(current_values) > 4:
+                        entry.insert(0, current_values[4] or "")
+                    elif key == "contact" and len(current_values) > 5:
+                        entry.insert(0, current_values[5] or "")
+                    elif key == "address" and len(current_values) > 6:
+                        entry.insert(0, current_values[6] or "")
                         
-            entries[key] = entry
+                entries[key] = entry
         
         # Submit button
         def submit():

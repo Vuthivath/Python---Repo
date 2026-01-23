@@ -5,6 +5,7 @@ import report # report mofule
 import database  # database module
 import student  # student module
 import login  # login module
+import course  # course module
 
 class GradeManagementSystem:
     def __init__(self):
@@ -148,6 +149,8 @@ class GradeManagementSystem:
         
         tk.Button(nav_frame, text="Student Management", 
                  command=self.show_students, width=20).pack(side="left", padx=5)
+        tk.Button(nav_frame, text="Course Management", 
+                 command=self.show_courses, width=20).pack(side="left", padx=5)
         tk.Button(nav_frame, text="Grade Management", 
                  command=self.show_grades, width=20).pack(side="left", padx=5)
         tk.Button(nav_frame, text="Reports", 
@@ -171,14 +174,21 @@ class GradeManagementSystem:
         # Create StudentManager in content frame
         student.StudentManager(self.content_frame, self.db)
     
+    def show_courses(self):
+        """Show course management interface"""
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+        
+        # Create CourseManager in content frame
+        course.CourseManager(self.content_frame, self.db)
+    
     def show_grades(self):
         """Show grade management interface"""
         for widget in self.content_frame.winfo_children():
             widget.destroy()
         
-        tk.Label(self.content_frame, text="Grade Management", 
-                font=("Arial", 18)).pack(pady=50)
-        # Grade management here later
+        # Create GradeManager in content frame
+        course.GradeManager(self.content_frame, self.db)
     
     def show_reports(self):
         """Show reports interface"""
