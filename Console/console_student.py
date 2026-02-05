@@ -1,10 +1,12 @@
 class ConsoleStudentManager:
+    # Manages student-related operations: creating, reading, updating, 
+    # and deleting student records in the database.
     def __init__(self, db_connection):
-        """Initialize student manager"""
+        # Initialize student manager
         self.db = db_connection
     
     def menu(self):
-        """Show student management menu"""
+        # Show student management menu
         while True:
             print("\n" + "=" * 60)
             print("STUDENT MANAGEMENT")
@@ -32,61 +34,43 @@ class ConsoleStudentManager:
             elif choice == "6":
                 break
             else:
-                print("[✗] Invalid choice. Please try again.")
+                print("Invalid choice. Please try again.")
     
-    def view_all_students(self):
-        """Display all students in a table (5 per page)"""
+    def view_all_students(self): #SHOW ALL STUDENTS
+        print("-" * 60)
         try:
+            # Select specific columns to ensure display order
             query = """
-                SELECT studentID, firstName, lastName, gender, department, status
+                SELECT studentID, firstName, lastName, gender, dateOfbirth, address, department, status
                 FROM tblStudent
-                ORDER BY lastName, firstName
             """
             rows = self.db.fetch_all(query)
             
-            if not rows or len(rows) == 0:
-                print("\n[i] No students found in the database.")
+            if not rows:
+                print("No students found.")
                 return
-            
-            # Paginate: show 5 students at a time
-            students_per_page = 5
-            total_pages = (len(rows) + students_per_page - 1) // students_per_page
-            
-            for page in range(total_pages):
-                start_idx = page * students_per_page
-                end_idx = min(start_idx + students_per_page, len(rows))
-                page_rows = rows[start_idx:end_idx]
-                
-                print("\n" + "=" * 90)
-                print(f"STUDENTS (Page {page + 1}/{total_pages})")
-                print("=" * 90)
-                print(f"{'ID':<5} {'First Name':<15} {'Last Name':<15} {'Gender':<8} {'department':<20} {'Status':<10}")
-                print("-" * 90)
-                
-                for row in page_rows:
-                    try:
-                        print(f"{row.studentID:<5} {row.firstName:<15} {row.lastName:<15} {row.gender:<8} {row.department:<20} {row.status:<10}")
-                    except Exception as row_error:
-                        print(f"[✗] Error processing row: {row_error}")
-                        continue
-                
-                print("=" * 90)
-                
-                # Ask if user wants to see next page
-                if page < total_pages - 1:
-                    cont = input("Press Enter to see next page (or 'q' to quit): ").strip().lower()
-                    if cont == 'q':
-                        break
-            
-            print(f"\n[i] Total students: {len(rows)}")
-            
+
+            # Print table header with fixed-width formatting
+            print("ID".ljust(10), "First Name".ljust(15), "Last Name".ljust(15),
+                  "Gender".ljust(8), "Date of Birth".ljust(15), "Address".ljust(15), "Department".ljust(15), "Status".ljust(15))
+
+            # Iterate through rows and print formatted data
+            for p in rows:
+                print(str(p.studentID).ljust(10),
+                      str(p.firstName).ljust(15),
+                      str(p.lastName).ljust(15),
+                      str(p.gender).ljust(8),
+                      self.db.format_date(p.dateOfbirth).ljust(15),
+                      str(p.address).ljust(15),
+                      str(p.department).ljust(15),
+                      str(p.status).ljust(15))
+
         except Exception as e:
-            print(f"[✗] Error loading students: {e}")
-            print(f"[!] Please check if tblStudent table exists in the database")
+            print("Database error:", e)
     
-    def search_student(self):
+    def search_student(self): #CHOICES OF SEARCH STUDENTS
         """Search for a student"""
-        print("\n" + "-" * 60)
+        print("-" * 60)
         print("SEARCH STUDENT")
         print("-" * 60)
         print("1. Search by ID")
@@ -100,13 +84,13 @@ class ConsoleStudentManager:
         elif choice == "2":
             self.search_by_name()
         else:
-            print("[✗] Invalid choice.")
+            print("Invalid choice.")
     
-    def search_by_id(self):
-        """Search student by ID"""
+    def search_by_id(self): #SEARCH STUDENTS BY ID
         try:
-            student_id = input("Enter student ID: ").strip()
-            
+            student_id = input("Enter Student ID to search: ").strip()
+
+            # Use parameterized query to prevent SQL injection
             query = """
                 SELECT studentID, firstName, lastName, gender, dateOfbirth, 
                        contact, address, department, status
@@ -115,7 +99,7 @@ class ConsoleStudentManager:
             row = self.db.fetch_one(query, (student_id,))
             
             if row:
-                print("\n" + "=" * 60)
+                print("=" * 60)
                 print("STUDENT DETAILS")
                 print("=" * 60)
                 print(f"ID:             {row.studentID}")
@@ -124,19 +108,19 @@ class ConsoleStudentManager:
                 print(f"DOB:            {self.db.format_date(row.dateOfbirth)}")
                 print(f"Contact:        {row.contact}")
                 print(f"Address:        {row.address}")
-                print(f"department:     {row.department}")
+                print(f"Department:     {row.department}")
                 print(f"Status:         {row.status}")
                 print("=" * 60)
             else:
-                print("[✗] Student not found.")
+                print("Student not found.")
         except Exception as e:
-            print(f"[✗] Error: {e}")
+            print("Error: {e}")
     
-    def search_by_name(self):
-        """Search student by name"""
+    def search_by_name(self): #SEARCH STUDENTS BY NAME
         try:
             name = input("Enter student name (first or last): ").strip()
             
+            # Search for partial matches in either first or last name
             query = """
                 SELECT studentID, firstName, lastName, gender, dateOfbirth, 
                        contact, address, department, status
@@ -144,27 +128,32 @@ class ConsoleStudentManager:
                 WHERE firstName LIKE ? OR lastName LIKE ?
                 ORDER BY lastName, firstName
             """
+            # Add wildcards for partial matching
             search_pattern = f"%{name}%"
             rows = self.db.fetch_all(query, (search_pattern, search_pattern))
             
             if not rows:
-                print("[✗] No students found with that name.")
+                print("No students found with that name.")
                 return
             
             print("\n" + "-" * 100)
             print(f"Found {len(rows)} student(s):")
             print("-" * 100)
-            print(f"{'ID':<8} {'First Name':<15} {'Last Name':<15} {'Gender':<8} {'Contact':<15} {'department':<20} {'Status':<10}")
+            print("ID".ljust(10), "First Name".ljust(15), "Last Name".ljust(15), 
+                  "Gender".ljust(8), "Contact".ljust(15), "Department".ljust(20), "Status".ljust(10))
             print("-" * 100)
             
             for row in rows:
-                print(f"{row.studentID:<8} {row.firstName:<15} {row.lastName:<15} {row.gender:<8} {row.contact:<15} {row.department:<20} {row.status:<10}")
+                print(str(row.studentID).ljust(10), str(row.firstName).ljust(15), 
+                      str(row.lastName).ljust(15), str(row.gender).ljust(8), 
+                      str(row.contact).ljust(15), str(row.department).ljust(20), 
+                      str(row.status).ljust(10))
             
             print("-" * 100)
         except Exception as e:
-            print(f"[✗] Error: {e}")
+            print(f"Error: {e}")
     
-    def add_student(self):
+    def add_student(self): #ADD STUDENTS
         """Add a new student"""
         print("\n" + "-" * 60)
         print("ADD NEW STUDENT")
@@ -181,9 +170,10 @@ class ConsoleStudentManager:
             status = input("Status (Active/Inactive): ").strip()
             
             if not first_name or not last_name:
-                print("[✗] First name and last name are required.")
+                print("First name and last name are required.")
                 return
             
+            # Insert new student record
             query = """
                 INSERT INTO tblStudent (firstName, lastName, gender, dateOfbirth, 
                                        contact, address, department, status)
@@ -193,15 +183,14 @@ class ConsoleStudentManager:
             values = (first_name, last_name, gender, dob, contact, address, department, status)
             
             if self.db.execute_query(query, values):
-                print("[✓] Student added successfully!")
+                print("Student added successfully!")
             else:
-                print("[✗] Failed to add student.")
+                print("Failed to add student.")
         except Exception as e:
-            print(f"[✗] Error: {e}")
+            print(f"Error: {e}")
     
-    def update_student(self):
-        """Update existing student"""
-        print("\n" + "-" * 60)
+    def update_student(self): #UPDATE STUDENT
+        print("-" * 60)
         print("UPDATE STUDENT")
         print("-" * 60)
         
@@ -211,7 +200,7 @@ class ConsoleStudentManager:
             # Check if student exists
             query = "SELECT * FROM tblStudent WHERE studentID=?"
             if not self.db.fetch_one(query, (student_id,)):
-                print("[✗] Student not found.")
+                print("Student not found.")
                 return
             
             print("\nEnter new information (leave blank to keep current value):")
@@ -222,9 +211,10 @@ class ConsoleStudentManager:
             contact = input("Contact: ").strip()
             address = input("Address: ").strip()
             department = input("Department: ").strip()
-            status = input("Status: ").strip()
+            status = input("Status (Active/Inactive): ").strip()
             
-            # Build update query dynamically (only update non-empty fields)
+            # Dynamically build the UPDATE query based on provided inputs
+            # Only fields that are not empty will be updated
             updates = []
             params = []
             
@@ -254,38 +244,37 @@ class ConsoleStudentManager:
                 params.append(status)
             
             if not updates:
-                print("[i] No updates provided.")
+                print("No updates provided.")
                 return
             
+            # Add the ID as the final parameter for the WHERE clause
             params.append(student_id)
             query = f"UPDATE tblStudent SET {', '.join(updates)} WHERE studentID=?"
             
             if self.db.execute_query(query, params):
-                print("[✓] Student updated successfully!")
+                print("Student updated successfully!")
             else:
-                print("[✗] Failed to update student.")
+                print("Failed to update student.")
         except Exception as e:
-            print(f"[✗] Error: {e}")
+            print(f"Error: {e}")
     
-    def delete_student(self):
+    def delete_student(self): #DELETE STUDENTS
         """Delete a student"""
-        print("\n" + "-" * 60)
+        print("-" * 60)
         print("DELETE STUDENT")
         print("-" * 60)
         
         try:
             student_id = input("Enter student ID to delete: ").strip()
-            
-            # Confirm deletion
             confirm = input("Are you sure you want to delete this student? (y/n): ").strip().lower()
             if confirm != 'y':
-                print("[i] Deletion cancelled.")
+                print("Deletion cancelled.")
                 return
             
             query = "DELETE FROM tblStudent WHERE studentID=?"
             if self.db.execute_query(query, (student_id,)):
-                print("[✓] Student deleted successfully!")
+                print("Student deleted successfully!")
             else:
-                print("[✗] Failed to delete student.")
+                print("Failed to delete student.")
         except Exception as e:
-            print(f"[✗] Error: {e}")
+            print(f"Error: {e}")

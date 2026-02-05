@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 class DatabaseConnection:
     def __init__(self, db_path=None):
-        """Initialize database connection"""
+        # Initialize database connection
         if db_path is None:
             # Default path
             self.db_path = r"D:\Documents\DBMS\Assignment-Python.accdb"
@@ -20,28 +20,28 @@ class DatabaseConnection:
         self.connect()
     
     def connect(self):
-        """Establish database connection"""
+        # Establish database connection
         try:
             self.conn = pyodbc.connect(self.conn_string)
             self.cursor = self.conn.cursor()
-            print("[+] Database connected successfully.")
+            print("Database connected successfully.")
             return True
         except FileNotFoundError:
-            print(f"[-] Database file not found at: {self.db_path}")
-            print("[!] Please ensure the database file exists.")
+            print(f"Database file not found at: {self.db_path}")
+            print("Please ensure the database file exists.")
             return False
         except Exception as e:
-            print(f"[-] Connection failed: {e}")
+            print(f"Connection failed: {e}")
             return False
     
-    def format_date(self, d):
-        """Format date for display"""
+    def format_date(self, d): #FORMAT DATE
+        # Format date for display
         if isinstance(d, (date, datetime)):
             return d.strftime("%Y-%m-%d")
         return ""
     
     def execute_query(self, query, params=None):
-        """Execute a query and commit"""
+        # Execute a query and commit
         try:
             if params:
                 self.cursor.execute(query, params)
@@ -50,11 +50,11 @@ class DatabaseConnection:
             self.conn.commit()
             return True
         except Exception as e:
-            print(f"[-] Query error: {e}")
+            print(f"    Query error: {e}")
             return False
     
     def fetch_one(self, query, params=None):
-        """Fetch single row"""
+        # Fetch single row
         try:
             if params:
                 self.cursor.execute(query, params)
@@ -64,17 +64,18 @@ class DatabaseConnection:
             if not row:
                 return None
 
-            # Build attribute-accessible object from row and column names
+            # Convert the tuple row into a SimpleNamespace object
+            # This allows accessing columns by name (e.g., row.studentID instead of row[0])
             cols = [c[0] for c in self.cursor.description] if self.cursor.description else []
             data = {cols[i]: row[i] for i in range(len(cols))} if cols else dict(enumerate(row))
             return SimpleNamespace(**data)
         except Exception as e:
-            print(f"[-] Fetch error: {e}")
-            print(f"    Query: {query[:100]}...")
+            print(f"Fetch error: {e}")
+            print(f"Query: {query[:100]}...")
             return None
     
     def fetch_all(self, query, params=None):
-        """Fetch all rows"""
+        # Fetch all rows
         try:
             if params:
                 self.cursor.execute(query, params)
@@ -84,6 +85,7 @@ class DatabaseConnection:
             if not rows:
                 return []
 
+            # Convert all rows to SimpleNamespace objects for attribute access
             cols = [c[0] for c in self.cursor.description] if self.cursor.description else []
             out = []
             for row in rows:
@@ -94,30 +96,30 @@ class DatabaseConnection:
                 out.append(SimpleNamespace(**data))
             return out
         except Exception as e:
-            print(f"[-] Fetch error: {e}")
-            print(f"    Query: {query[:100]}...")
+            print(f"Fetch error: {e}")
+            print(f"Query: {query[:100]}...")
             return []
     
-    def close(self):
+    def close(self): #CLOSE DATABASE
         """Close database connection"""
         if self.cursor:
             self.cursor.close()
         if self.conn:
             self.conn.close()
-        print("[+] Database connection closed.")
+        print("Database connection closed.")
     
     def test_connection(self):
-        """Test database connection and verify tables exist"""
+        # Test database connection and verify tables exist
         try:
             # Test basic connection
             test_query = "SELECT COUNT(*) AS count FROM tblStudent"
             result = self.fetch_one(test_query)
             if result is not None:
-                print(f"[+] Database connection verified. Students: {result.count}")
+                print(f"Database connection verified. Students: {result.count}")
                 return True
             else:
-                print("[-] Could not connect to database or retrieve data.")
+                print("Could not connect to database or retrieve data.")
                 return False
         except Exception as e:
-            print(f"[-] Connection test failed: {e}")
+            print(f"Connection test failed: {e}")
             return False
